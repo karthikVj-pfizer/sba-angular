@@ -6,26 +6,25 @@ import {AppService} from "@sinequa/core/app-utils";
 import {SelectionService} from '@sinequa/components/selection';
 import {Subscription} from "rxjs";
 import {ChartOptions, ChartDataPoint} from "../chart/chart";
-import {FacetService} from "../../facet.service";
+import {FacetService, AbstractFacet} from "@sinequa/components/facet";
 import {Action} from "@sinequa/components/action";
-import {AbstractFacet} from "../../abstract-facet";
 
 export interface FacetChartDataPoint extends ChartDataPoint {
     $item: AggregationItem;
 }
 
 @Component({
-    selector: "sq-facet-chart",
+    selector: "sq-facet-ngx-chart",
     templateUrl: "./facet-chart.html"
 })
-export class BsFacetChart extends AbstractFacet implements OnInit, OnChanges, OnDestroy {
+export class FacetNgxChart extends AbstractFacet implements OnInit, OnChanges, OnDestroy {
     @Input() results: Results;
     @Input() aggregation: string;
     @Input() aggregations: string[];
     @Input() chartType: string;
     @Input() colorScheme: string;
     @Input() colors: string[] = ["#7aa3e5"];    // Single color (default is bar chart)
-    @Input() filteredColor: string = "#a8385d";
+    @Input() filteredColor: string = "#C3E6CB";
     @Input() selectedColor: string = "#7acce5";
 
     // Aggregation from the Results object
@@ -137,25 +136,26 @@ export class BsFacetChart extends AbstractFacet implements OnInit, OnChanges, On
      */
     private updateSelectedValues(){
         this.selectedValues.clear();
-        this.selectionService.selectedRecords.forEach(id => {
-            const record = this.results.records.find(record => record.id === id);
-            if(!!record && !!this.data){
-                const val = record[this.appService.getColumnAlias(this.appService.getColumn(this.data.column))];
-                if(val){
-                    if(Utils.isString(val)){    // Sourcestr
-                        this.selectedValues.add(val.toLowerCase());
-                    }
-                    if(Utils.isArray(val)){
-                        val.forEach(v => {
-                            if(Utils.isString(v))
-                                this.selectedValues.add(v.toLowerCase()); // Sourcecsv
-                            else
-                                this.selectedValues.add(v.value.toLowerCase()); // Entity
-                        });
+        this.results.records
+            .filter(record => record.$selected)
+            .forEach(record => {
+                if(this.data){
+                    const val = record[this.appService.getColumnAlias(this.appService.getColumn(this.data.column))];
+                    if(val){
+                        if(Utils.isString(val)){    // Sourcestr
+                            this.selectedValues.add(val.toLowerCase());
+                        }
+                        if(Utils.isArray(val)){
+                            val.forEach(v => {
+                                if(Utils.isString(v))
+                                    this.selectedValues.add(v.toLowerCase()); // Sourcecsv
+                                else
+                                    this.selectedValues.add(v.value.toLowerCase()); // Entity
+                            });
+                        }
                     }
                 }
-            }
-        });
+            });
     }
 
     /**

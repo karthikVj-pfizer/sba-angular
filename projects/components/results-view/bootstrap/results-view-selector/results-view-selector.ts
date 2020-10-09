@@ -63,11 +63,13 @@ export class BsResultsViewSelector implements OnChanges, OnDestroy {
     private buildViewAction() {
         if (this.resultsViewService.views.length <= 1) {
             this.viewAction = undefined;
+            this.items = [];
             return;
         }
         const includedViews = this.getIncludedViews();
         if (includedViews.length <= 1) {
             this.viewAction = undefined;
+            this.items = [];
             return;
         }
         if (this.useDropdownMenu) {
@@ -124,10 +126,7 @@ export class BsResultsViewSelector implements OnChanges, OnDestroy {
     }
 
     ngOnChanges(changes: SimpleChanges) {
-        if (!!changes["results"]) {
-            // new results, possible because of selecting a new tab, rebuild the view list.
-            this.buildViewAction();
-        }
+        this.buildViewAction();
     }
 
     selectView(view: ResultsView) {

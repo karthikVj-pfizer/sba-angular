@@ -6,9 +6,10 @@ import { ValidationService } from "@sinequa/core/validation";
 import { NotificationsService } from "@sinequa/core/notification";
 import { Utils } from "@sinequa/core/base";
 import { ModalRef, ModalButton, ModalResult, MODAL_MODEL } from "@sinequa/core/modal";
-import { ExportSourceType, ExportOutputFormat} from "@sinequa/core/web-services";
+import { ExportSourceType, ExportOutputFormat, CCWebService, CCApp} from "@sinequa/core/web-services";
 import {SavedQueriesService, ExportQueryModel} from "../../saved-queries.service";
 import {SelectionService} from "@sinequa/components/selection";
+import { AppService } from '@sinequa/core/app-utils';
 
 /**
  * Component representing the Export dialog where user can customize the query export action.
@@ -33,12 +34,14 @@ export class BsExportQuery implements OnInit, OnDestroy {
     public savedQueries: string[];
     public buttons: ModalButton[];
     public isDownloading: boolean;
+    public exportableColumns: string[];
 
     private formChanges: Subscription;
 
     constructor(
         @Inject(MODAL_MODEL) public model: ExportQueryModel,
         private formBuilder: FormBuilder,
+        private appService: AppService,
         private selectionService: SelectionService,
         private savedQueriesService: SavedQueriesService,
         private validationService: ValidationService,
@@ -52,8 +55,18 @@ export class BsExportQuery implements OnInit, OnDestroy {
             this.savedQueries.push(query.name);
         }
 
+        this.exportableColumns = [];
+        if (this.appService.app) {
+            const queryExportConfig = this.getDefaultQueryExportConfig(this.appService.app);
+            const columns = (queryExportConfig.columns && queryExportConfig.columns['column$']) || [];
+            for (const column of columns) {
+                this.exportableColumns.push(column.title);
+            }
+        }
+
         this.form = this.formBuilder.group({
             'format': [this.supportedFormats[0]],
+            'exportedColumns': [this.model.exportedColumns],
             'export': [this.model.export, Validators.required],
             'maxCount': [this.model.maxCount, Validators.compose([
                 this.validationService.integerValidator(),
@@ -96,6 +109,7 @@ export class BsExportQuery implements OnInit, OnDestroy {
         const onFormChanged = () => {
             const newFormat = this.form.value['format'];
             const newMaxCount = this.form.value['maxCount'];
+            const newExportedColumns = this.form.value['exportedColumns'];
 
             if (this.model.format !== newFormat) {
                 this.model.format = newFormat;
@@ -104,6 +118,8 @@ export class BsExportQuery implements OnInit, OnDestroy {
             if (this.model.maxCount !== newMaxCount) {
                 this.model.maxCount = newMaxCount;
             }
+
+            this.model.exportedColumns = newExportedColumns;
         };
 
         this.formChanges = Utils.subscribe(this.form.valueChanges, onFormChanged);
@@ -115,6 +131,13 @@ export class BsExportQuery implements OnInit, OnDestroy {
         }
     }
 
+    private getDefaultQueryExportConfig(app: CCApp): CCQueryExport {
+        let queryExport = app.queryExport;
+        if (queryExport.indexOf(',') !== -1) {
+            queryExport = queryExport.substring(0, queryExport.indexOf(','));
+        }
+        return <CCQueryExport>Utils.getField(app.webServices, queryExport);
+    }
 
     /**
      * Check if the client has selected some records.
@@ -164,4 +187,21 @@ export class BsExportQuery implements OnInit, OnDestroy {
     public close(): void {
         this.modalRef.close(ModalResult.Cancel);
     }
+}
+
+interface CCQueryExportColumnDef {
+    title: string;
+    pattern: string;
+    selectionQuery?: string;
+}
+
+interface CCQueryExport extends CCWebService {
+    webServiceType: "queryexport";
+    columns?: CCQueryExportColumnDef[];
+    linksFilterDuplicateUrls?: boolean;
+    linksGlobalRelevance?: string;
+    linksMaxCount?: number;
+    linksSortByOrder?: boolean;
+    maxCount?: number;
+    separator?: string;
 }

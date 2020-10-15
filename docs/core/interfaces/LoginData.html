@@ -313,6 +313,15 @@ export class LoginService implements OnDestroy {
         return this._events;
     }
 
+    /**
+     * Get the currently logged in {@link Principal}, if any. Note that a principal can exist
+     * without the login being complete. For example, in the situation where access is denied to
+     * the selected app.
+     */
+    get principal(): Principal | undefined {
+        return this.principalService.principal;
+    }
+
     private setComplete() {
         const complete &#x3D; this.complete;
         this.complete &#x3D; !!this.appService.app &amp;&amp; !!this.principalService.principal &amp;&amp; !!this.userSettingsService.userSettings;
@@ -352,6 +361,7 @@ export class LoginService implements OnDestroy {
      */
     overrideUser(userOverride: UserOverride | undefined) {
         this.authenticationService.userOverride &#x3D; userOverride;
+        this.appService.clear();
         this.principalService.principal &#x3D; undefined;
         this.userSettingsService.userSettings &#x3D; undefined;
         this.setComplete();
@@ -482,8 +492,15 @@ export class LoginService implements OnDestroy {
             return Promise.resolve(); // initiate retry
         }
         if (!this.startConfig.usePopupForLogin &amp;&amp; this.authenticationService.autoLoginActive) {
-            this.authenticationService.autoAuthenticate().subscribe();
-            return Promise.reject(&quot;performing auto login&quot;);
+            return this.authenticationService.autoAuthenticate().toPromise()
+                .then(result &#x3D;&gt; {
+                    if (result/*auto-authentication initiated*/) {
+                        return Promise.reject(&quot;performing auto login&quot;);
+                    }
+                    else {
+                        return undefined;
+                    }
+                });
         }
         let firstCaller &#x3D; false;
         const automaticProvider &#x3D; this.getAutomaticProvider();

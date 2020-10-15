@@ -91,6 +91,10 @@ export interface Results {
      * A hash of the associated results for use with RFM (relevance feedback model) functionality
      */
     rfmQueryHash: string;
+    /**
+     * The name of the {@link IQuery} that produced these results
+     */
+    queryName: string;
 }
 
 /**
@@ -223,6 +227,7 @@ export interface QueryIntentDatasets {
 export interface QueryAnalysis {
     text: string;
     initial: boolean;
+    queryLanguage: string | undefined;
     elements: QueryAnalysisElement[];
 }
 
